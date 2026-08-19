@@ -81,7 +81,27 @@ public sealed class AppController : IDisposable
         _exercise.Closed += (_, _) => { if (_engine.State == ReminderState.Exercising) _engine.Skip(DateTimeOffset.Now); _exercise = null; }; _exercise.Show();
     }
     public void PlaySelectedSound() { if (!_settings.PlaySound) return; (_settings.Sound switch { NotificationSound.Exclamation => SystemSounds.Exclamation, NotificationSound.Beep => SystemSounds.Beep, _ => SystemSounds.Asterisk }).Play(); }
-    public void ShowMain() { if (_main is null) { _viewModel = new MainViewModel(this, _settings); _main = new MainWindow(_viewModel); } _main.Show(); _main.WindowState = WindowState.Normal; _main.Activate(); }
+    public void PreviewTheme(bool dark) { ThemeService.Apply(dark); ThemeService.ApplyTo(_tray.ContextMenuStrip, dark); }
+    public void ShowMain()
+    {
+        if (_main is null)
+        {
+            _viewModel = new MainViewModel(this, _settings);
+            _main = new MainWindow(_viewModel);
+            _main.Closed += OnMainClosed;
+        }
+        _main.Show();
+        _main.WindowState = WindowState.Normal;
+        _main.Activate();
+    }
+
+    private void OnMainClosed(object? sender, EventArgs e)
+    {
+        if (sender is MainWindow window) window.Closed -= OnMainClosed;
+        if (!ReferenceEquals(sender, _main)) return;
+        _main = null;
+        _viewModel = null;
+    }
     public async Task SaveSettingsAsync(AppSettings settings)
     {
         var oldRegistered = _startup.IsRegistered();

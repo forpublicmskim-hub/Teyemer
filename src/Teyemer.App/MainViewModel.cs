@@ -21,6 +21,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public int ReminderIntervalMinutes { get => _settings.ReminderIntervalMinutes; set { _settings.ReminderIntervalMinutes = value; Changed(); } }
     public int ExerciseDurationSeconds { get => _settings.ExerciseDurationSeconds; set { _settings.ExerciseDurationSeconds = value; Changed(); } }
     public int PopupDismissSeconds { get => _settings.PopupDismissSeconds; set { _settings.PopupDismissSeconds = value; Changed(); } }
+    public bool UseDarkMode
+    {
+        get => _settings.UseDarkMode;
+        set
+        {
+            if (_settings.UseDarkMode == value) return;
+            _settings.UseDarkMode = value;
+            _controller.PreviewTheme(value);
+            Changed();
+        }
+    }
     public Array Sounds => Enum.GetValues<NotificationSound>();
     public IEnumerable<ScheduleRow> ScheduleRows => Enum.GetValues<DayOfWeek>().Select(d => new ScheduleRow(d, _settings.Schedule[d]));
     public string StatusText { get => _statusText; set { _statusText = value; Changed(); } }

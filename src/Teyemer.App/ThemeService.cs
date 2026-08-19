@@ -11,6 +11,7 @@ namespace Teyemer.App;
 public static class ThemeService
 {
     private static bool _isDark;
+    public static event EventHandler? ThemeChanged;
     public static void Apply(bool dark)
     {
         _isDark = dark;
@@ -30,6 +31,7 @@ public static class ThemeService
         Set(resources, "ErrorBrush", dark ? "#FF9B95" : "#B42318");
         Set(resources, "IconBackgroundBrush", dark ? "#B8263F63" : "#CCDCEAFF");
         foreach (Window window in System.Windows.Application.Current.Windows) ApplyNativeWindow(window, dark);
+        ThemeChanged?.Invoke(null, EventArgs.Empty);
     }
 
     public static void Attach(Window window)
