@@ -1,4 +1,6 @@
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
@@ -6,11 +8,21 @@ using System.Windows.Threading;
 namespace Teyemer.App;
 public partial class ReminderWindow : Window
 {
+ private const int GwlExStyle = -20;
+ private const int WsExNoActivate = 0x08000000;
  public event EventHandler? StartRequested; public event EventHandler? SnoozeRequested; public event EventHandler? SkipRequested;
  private readonly DispatcherTimer _dismissTimer;
  private readonly Storyboard _emphasisStoryboard = new();
  private bool _isDismissing;
  public ReminderWindow(bool isPreview = false, int dismissSeconds = 30) { InitializeComponent(); PreviewLabel.Visibility = isPreview ? Visibility.Visible : Visibility.Collapsed; ConfigureBorderHighlight(); ConfigureEmphasisAnimation(); _dismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(dismissSeconds) }; _dismissTimer.Tick += OnDismiss; Loaded += OnLoaded; Closed += OnClosed; }
+
+ protected override void OnSourceInitialized(EventArgs e)
+ {
+  base.OnSourceInitialized(e);
+  var handle = new WindowInteropHelper(this).Handle;
+  var extendedStyle = GetWindowLong(handle, GwlExStyle);
+  SetWindowLong(handle, GwlExStyle, extendedStyle | WsExNoActivate);
+ }
  private void OnLoaded(object sender, RoutedEventArgs e)
  {
   var area = SystemParameters.WorkArea;
@@ -103,4 +115,10 @@ public partial class ReminderWindow : Window
   group.Children.Add(pulse);
   return group;
  }
+
+ [DllImport("user32.dll", SetLastError = true)]
+ private static extern int GetWindowLong(IntPtr window, int index);
+
+ [DllImport("user32.dll", SetLastError = true)]
+ private static extern int SetWindowLong(IntPtr window, int index, int newStyle);
 }

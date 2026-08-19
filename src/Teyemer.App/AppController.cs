@@ -64,7 +64,7 @@ public sealed class AppController : IDisposable
     {
         if (_settings.PlaySound) PlaySelectedSound();
         if (!isPreview && !_settings.ShowPopup) { _tray.ShowBalloonTip(5000, "Teyemer", "눈 운동 시간입니다. 트레이 메뉴에서 운동을 시작하세요.", Forms.ToolTipIcon.Info); return; }
-        if (_reminder is not null) { _reminder.Activate(); return; }
+        if (_reminder is not null) return;
         var dismissSeconds = Math.Clamp(_settings.PopupDismissSeconds, AppSettings.MinPopupDismissSeconds, AppSettings.MaxPopupDismissSeconds);
         _reminder = new ReminderWindow(isPreview, dismissSeconds);
         _reminder.StartRequested += (_, _) => { _reminder.Close(); StartExercise(); };
