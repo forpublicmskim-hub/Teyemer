@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+.codegraph/
+*.user
+*.suo
+artifacts/

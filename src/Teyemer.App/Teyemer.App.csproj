@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Teyemer.Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Compile Include="..\Teyemer.Infrastructure\*.cs" Link="Infrastructure\%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

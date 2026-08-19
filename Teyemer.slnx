@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/Teyemer.App/Teyemer.App.csproj" />
+  <Project Path="tests/Teyemer.Tests/Teyemer.Tests.csproj" />
+</Solution>
