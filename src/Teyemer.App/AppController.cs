@@ -15,9 +15,10 @@ public sealed class AppController : IDisposable
     private readonly Forms.NotifyIcon _tray = new() { Icon = SystemIcons.Information, Text = "Teyemer", Visible = true };
     private AppSettings _settings; private ReminderEngine _engine; private MainWindow? _main; private MainViewModel? _viewModel;
     private ReminderWindow? _reminder; private ExerciseWindow? _exercise; private bool _dueHandled;
+    private string? _lastStatusText;
     public static bool IsExiting { get; private set; }
     public AppController(AppSettings settings, ISettingsStore store, IStartupRegistrationService startup)
-    { _settings = settings; _store = store; _startup = startup; _settings.StartWithWindows = startup.IsRegistered(); _engine = new(settings, DateTimeOffset.Now); BuildTrayMenu(); _timer.Tick += OnTick; _tray.DoubleClick += (_, _) => ShowMain(); }
+    { _settings = settings; _store = store; _startup = startup; _settings.StartWithWindows = startup.IsRegistered(); _engine = new(settings, DateTimeOffset.Now); BuildTrayMenu(); _timer.Tick += OnTick; _tray.DoubleClick += OnTrayDoubleClick; }
     public void Initialize(bool commandLineMinimized) { _timer.Start(); if (!commandLineMinimized) ShowMain(); OnTick(null, EventArgs.Empty); }
 
     private void BuildTrayMenu()
@@ -25,12 +26,12 @@ public sealed class AppController : IDisposable
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("상태 확인 중…").Name = "status"; menu.Items[0].Enabled = false;
         menu.Items.Add("지금 눈 운동하기", null, (_, _) => StartExercise());
-        menu.Items.Add("30분 동안 일시정지", null, (_, _) => { _engine.PauseUntil(DateTimeOffset.Now.AddMinutes(30)); _dueHandled = false; });
-        menu.Items.Add("오늘 하루 일시정지", null, (_, _) => { var now = DateTimeOffset.Now; _engine.PauseUntil(new DateTimeOffset(now.Date.AddDays(1), now.Offset)); _dueHandled = false; });
+        menu.Items.Add("30분 동안 일시정지", null, (_, _) => { _engine.PauseUntil(DateTimeOffset.Now.AddMinutes(30)); _dueHandled = false; OnTick(null, EventArgs.Empty); });
+        menu.Items.Add("오늘 하루 일시정지", null, (_, _) => { var now = DateTimeOffset.Now; _engine.PauseUntil(new DateTimeOffset(now.Date.AddDays(1), now.Offset)); _dueHandled = false; OnTick(null, EventArgs.Empty); });
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("설정 열기", null, (_, _) => ShowMain());
-        menu.Items.Add("눈 운동 안내 열기", null, (_, _) => ShowMain());
         menu.Items.Add(new Forms.ToolStripSeparator()); menu.Items.Add("종료", null, (_, _) => Exit());
+        menu.Opening += OnTrayMenuOpening;
         _tray.ContextMenuStrip = menu;
         ThemeService.ApplyTo(menu, _settings.UseDarkMode);
     }
@@ -38,11 +39,13 @@ public sealed class AppController : IDisposable
     private void OnTick(object? sender, EventArgs e)
     {
         var now = DateTimeOffset.Now;
-        if (GetIdleTime() > TimeSpan.FromMinutes(10) && _engine.State != ReminderState.SessionInactive) _engine.SetSessionActive(false, now);
-        else if (GetIdleTime() <= TimeSpan.FromMinutes(1) && _engine.State == ReminderState.SessionInactive) _engine.SetSessionActive(true, now);
+        var idleTime = GetIdleTime();
+        if (idleTime > TimeSpan.FromMinutes(10) && _engine.State != ReminderState.SessionInactive) _engine.SetSessionActive(false, now);
+        else if (idleTime <= TimeSpan.FromMinutes(1) && _engine.State == ReminderState.SessionInactive) _engine.SetSessionActive(true, now);
         var snapshot = _engine.Tick(now); UpdateStatus(snapshot);
         if (snapshot.State == ReminderState.ReminderDue && !_dueHandled) { _dueHandled = true; ShowReminder(); }
         if (snapshot.State != ReminderState.ReminderDue) _dueHandled = false;
+        _timer.Interval = GetNextTickInterval(snapshot, _main is not null);
     }
 
     private void UpdateStatus(ReminderSnapshot s)
@@ -51,12 +54,15 @@ public sealed class AppController : IDisposable
         {
             ReminderState.Running => $"실행 중 · 다음 알림 {Format(s.Remaining)}",
             ReminderState.Paused => s.ResumeAt is null ? "알림 꺼짐" : $"일시정지 · {s.ResumeAt:HH:mm} 재개",
-            ReminderState.InactiveSchedule => s.NextActiveStart is null ? "비활성 시간" : $"비활성 · {s.NextActiveStart:ddd HH:mm} 시작",
+            ReminderState.InactiveSchedule => s.NextActiveStart is null ? "활성 시간 외" : $"활성 시간 외 · {s.NextActiveStart:ddd HH:mm} 시작",
             ReminderState.SessionInactive => "세션 비활성 · 복귀 후 새 주기 시작", ReminderState.ReminderDue => "눈 운동 시간입니다",
             ReminderState.Exercising => "눈 운동 중", ReminderState.Snoozed => $"다시 알림 · {Format(s.Remaining)}", _ => s.State.ToString()
         };
+        if (text == _lastStatusText) return;
+        _lastStatusText = text;
         if (_tray.ContextMenuStrip?.Items[0] is Forms.ToolStripItem item) item.Text = text;
-        _tray.Text = text.Length > 63 ? text[..63] : text; if (_viewModel is not null) _viewModel.StatusText = text;
+        _tray.Text = text.Length > 63 ? text[..63] : text;
+        if (_viewModel is not null) _viewModel.StatusText = text;
     }
     private static string Format(TimeSpan? value) => value is null ? "-" : value.Value.TotalHours >= 1 ? $"{(int)value.Value.TotalHours}시간 {value.Value.Minutes}분" : $"{Math.Max(0, value.Value.Minutes)}분 {Math.Max(0, value.Value.Seconds)}초";
 
@@ -76,9 +82,9 @@ public sealed class AppController : IDisposable
     public void StartExercise()
     {
         if (_exercise is not null) { _exercise.Activate(); return; }
-        _engine.StartExercise(); _exercise = new ExerciseWindow(_settings.ExerciseDurationSeconds);
+        _engine.StartExercise(); _exercise = new ExerciseWindow();
         _exercise.Finished += (_, completed) => { if (completed) _engine.CompleteExercise(DateTimeOffset.Now); else _engine.Skip(DateTimeOffset.Now); _exercise.Close(); };
-        _exercise.Closed += (_, _) => { if (_engine.State == ReminderState.Exercising) _engine.Skip(DateTimeOffset.Now); _exercise = null; }; _exercise.Show();
+        _exercise.Closed += (_, _) => { if (_engine.State == ReminderState.Exercising) _engine.Skip(DateTimeOffset.Now); _exercise = null; OnTick(null, EventArgs.Empty); }; _exercise.Show(); OnTick(null, EventArgs.Empty);
     }
     public void PlaySelectedSound() { if (!_settings.PlaySound) return; (_settings.Sound switch { NotificationSound.Exclamation => SystemSounds.Exclamation, NotificationSound.Beep => SystemSounds.Beep, _ => SystemSounds.Asterisk }).Play(); }
     public void PreviewTheme(bool dark) { ThemeService.Apply(dark); ThemeService.ApplyTo(_tray.ContextMenuStrip, dark); }
@@ -93,6 +99,8 @@ public sealed class AppController : IDisposable
         _main.Show();
         _main.WindowState = WindowState.Normal;
         _main.Activate();
+        _timer.Interval = TimeSpan.FromSeconds(1);
+        OnTick(null, EventArgs.Empty);
     }
 
     private void OnMainClosed(object? sender, EventArgs e)
@@ -101,6 +109,7 @@ public sealed class AppController : IDisposable
         if (!ReferenceEquals(sender, _main)) return;
         _main = null;
         _viewModel = null;
+        if (!IsExiting) OnTick(null, EventArgs.Empty);
     }
     public async Task SaveSettingsAsync(AppSettings settings)
     {
@@ -109,9 +118,42 @@ public sealed class AppController : IDisposable
         catch { settings.StartWithWindows = oldRegistered; throw; }
         await _store.SaveAsync(settings); _settings = settings; ThemeService.Apply(settings.UseDarkMode); ThemeService.ApplyTo(_tray.ContextMenuStrip, settings.UseDarkMode); _engine.UpdateSettings(settings, DateTimeOffset.Now); _dueHandled = false;
     }
-    public void SetSessionActive(bool active) { _engine.SetSessionActive(active, DateTimeOffset.Now); _dueHandled = false; }
+    public void SetSessionActive(bool active) { _engine.SetSessionActive(active, DateTimeOffset.Now); _dueHandled = false; OnTick(null, EventArgs.Empty); }
     private void Exit() { IsExiting = true; _timer.Stop(); _main?.Close(); _reminder?.Close(); _exercise?.Close(); System.Windows.Application.Current.Shutdown(); }
-    public void Dispose() { _timer.Stop(); _timer.Tick -= OnTick; _tray.Visible = false; _tray.Dispose(); }
+    public void Dispose()
+    {
+        _timer.Stop();
+        _timer.Tick -= OnTick;
+        _tray.DoubleClick -= OnTrayDoubleClick;
+        var menu = _tray.ContextMenuStrip;
+        if (menu is not null) menu.Opening -= OnTrayMenuOpening;
+        _tray.ContextMenuStrip = null;
+        _tray.Visible = false;
+        _tray.Dispose();
+        menu?.Dispose();
+    }
+
+    private void OnTrayDoubleClick(object? sender, EventArgs e) => ShowMain();
+    private void OnTrayMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e) => OnTick(null, EventArgs.Empty);
+
+    internal static TimeSpan GetNextTickInterval(ReminderSnapshot snapshot, bool mainWindowOpen)
+    {
+        if (mainWindowOpen || snapshot.State is ReminderState.ReminderDue or ReminderState.Exercising)
+            return TimeSpan.FromSeconds(1);
+        if (snapshot.State == ReminderState.SessionInactive)
+            return TimeSpan.FromSeconds(5);
+
+        var untilTransition = snapshot.State switch
+        {
+            ReminderState.Paused when snapshot.ResumeAt is not null => snapshot.ResumeAt - snapshot.Now,
+            ReminderState.InactiveSchedule when snapshot.NextActiveStart is not null => snapshot.NextActiveStart - snapshot.Now,
+            ReminderState.Running or ReminderState.Snoozed => snapshot.Remaining,
+            _ => null
+        };
+        if (untilTransition is not null && untilTransition <= TimeSpan.FromMinutes(1)) return TimeSpan.FromSeconds(1);
+        if (untilTransition is not null && untilTransition <= TimeSpan.FromMinutes(5)) return TimeSpan.FromSeconds(5);
+        return TimeSpan.FromSeconds(15);
+    }
 
     [StructLayout(LayoutKind.Sequential)] private struct LastInputInfo { public uint Size; public uint Time; }
     [DllImport("user32.dll")] private static extern bool GetLastInputInfo(ref LastInputInfo info);

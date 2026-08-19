@@ -20,8 +20,6 @@ public partial class MainWindow : Window
   ThemeService.Attach(this);
  }
 
- private void Quick_Click(object sender, RoutedEventArgs e) { if (sender is System.Windows.Controls.Button { Tag: string value } && int.TryParse(value, out var minutes) && DataContext is MainViewModel vm) vm.ReminderIntervalMinutes = minutes; }
-
  private void OnLoaded(object sender, RoutedEventArgs e) => StartBorderAnimation();
  private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) { if (IsVisible) StartBorderAnimation(); else StopBorderAnimation(); }
  private void OnThemeChanged(object? sender, EventArgs e) { StopBorderAnimation(); ConfigureBorderHighlight(); StartBorderAnimation(); }

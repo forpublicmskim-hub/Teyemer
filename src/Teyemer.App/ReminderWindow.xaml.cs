@@ -64,6 +64,12 @@ public partial class ReminderWindow : Window
   _emphasisStoryboard.Children.Add(CreateBorderPulse(AnimatedBorder));
  }
 
+ private void GlowClipHost_SizeChanged(object sender, SizeChangedEventArgs e)
+ {
+  if (sender is not FrameworkElement host || host.ActualWidth <= 0 || host.ActualHeight <= 0) return;
+  host.Clip = new RectangleGeometry(new Rect(0, 0, host.ActualWidth, host.ActualHeight), 17, 17);
+ }
+
  private void ConfigureBorderHighlight()
  {
   var accent = (System.Windows.Application.Current.Resources["AccentBrush"] as SolidColorBrush)?.Color ?? System.Windows.Media.Color.FromRgb(37, 99, 169);

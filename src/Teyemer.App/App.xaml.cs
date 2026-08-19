@@ -7,10 +7,19 @@ namespace Teyemer.App;
 
 public partial class App : System.Windows.Application
 {
+    private const string SingleInstanceMutexName = @"Local\Teyemer.Desktop.8E74C94F-0E67-48E0-AD8A-26D32D7E94B7";
     private AppController? _controller;
+    private SingleInstanceGuard? _singleInstance;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        _singleInstance = SingleInstanceGuard.TryAcquire(SingleInstanceMutexName);
+        if (_singleInstance is null)
+        {
+            Shutdown();
+            return;
+        }
+
         base.OnStartup(e);
         try
         {
@@ -43,6 +52,8 @@ public partial class App : System.Windows.Application
         SystemEvents.SessionSwitch -= OnSessionSwitch;
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _controller?.Dispose();
+        _singleInstance?.Dispose();
+        _singleInstance = null;
         base.OnExit(e);
     }
 }

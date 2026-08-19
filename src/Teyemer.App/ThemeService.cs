@@ -11,9 +11,12 @@ namespace Teyemer.App;
 public static class ThemeService
 {
     private static bool _isDark;
+    private static bool _hasApplied;
     public static event EventHandler? ThemeChanged;
     public static void Apply(bool dark)
     {
+        if (_hasApplied && _isDark == dark) return;
+        _hasApplied = true;
         _isDark = dark;
         var resources = System.Windows.Application.Current.Resources;
         Set(resources, "WindowBackgroundBrush", dark ? "#B8171B22" : "#CFF4F6F8");

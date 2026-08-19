@@ -8,4 +8,7 @@
     <Compile Include="..\Teyemer.Core\*.cs" Link="Core\%(Filename)%(Extension)" />
     <Compile Include="..\Teyemer.Infrastructure\*.cs" Link="Infrastructure\%(Filename)%(Extension)" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Teyemer.Tests" />
+  </ItemGroup>
 </Project>

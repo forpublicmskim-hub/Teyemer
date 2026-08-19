@@ -48,8 +48,6 @@ public sealed class ReminderEngine
 
     public ReminderSnapshot Tick(DateTimeOffset now)
     {
-        if (!_settings.RemindersEnabled)
-            return Snapshot(ReminderState.Paused, now, null, null, null);
         if (!_sessionActive)
             return Snapshot(ReminderState.SessionInactive, now, null, null, null);
         if (_state == ReminderState.Exercising)

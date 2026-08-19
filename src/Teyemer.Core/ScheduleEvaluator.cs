@@ -6,42 +6,22 @@ public static class ScheduleEvaluator
 {
     public static ScheduleStatus Evaluate(DateTimeOffset now, AppSettings settings)
     {
-        if (!settings.ActiveScheduleEnabled)
+        if (!settings.ActiveScheduleEnabled || IsActive(now, settings.ActiveStart, settings.ActiveEnd))
             return new(true, null);
 
-        if (IsActive(now, settings.Schedule))
-            return new(true, null);
-
-        for (var days = 0; days <= 7; days++)
-        {
-            var date = now.Date.AddDays(days);
-            var day = date.DayOfWeek;
-            if (!settings.Schedule.TryGetValue(day, out var slot) || !slot.IsEnabled)
-                continue;
-
-            var candidate = new DateTimeOffset(date + slot.Start.ToTimeSpan(), now.Offset);
-            if (candidate > now)
-                return new(false, candidate);
-        }
-
-        return new(false, null);
+        var todayStart = new DateTimeOffset(now.Date + settings.ActiveStart.ToTimeSpan(), now.Offset);
+        var nextStart = todayStart > now ? todayStart : todayStart.AddDays(1);
+        return new(false, nextStart);
     }
 
-    public static bool IsActive(DateTimeOffset now, IReadOnlyDictionary<DayOfWeek, DailySchedule> schedule)
+    public static bool IsActive(DateTimeOffset now, TimeOnly start, TimeOnly end)
     {
-        var time = TimeOnly.FromDateTime(now.LocalDateTime);
-        if (schedule.TryGetValue(now.DayOfWeek, out var today) && today.IsEnabled)
-        {
-            if (today.Start == today.End || (today.Start < today.End && time >= today.Start && time < today.End))
-                return true;
-            if (today.Start > today.End && time >= today.Start)
-                return true;
-        }
+        if (start == end)
+            return true;
 
-        var previousDay = now.AddDays(-1).DayOfWeek;
-        return schedule.TryGetValue(previousDay, out var previous)
-            && previous.IsEnabled
-            && previous.Start > previous.End
-            && time < previous.End;
+        var time = TimeOnly.FromDateTime(now.LocalDateTime);
+        return start < end
+            ? time >= start && time < end
+            : time >= start || time < end;
     }
 }
