@@ -1,4 +1,7 @@
 using System.Text.Json.Serialization;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace Teyemer.Core;
 
@@ -21,6 +24,7 @@ public sealed class AppSettings
     public TimeOnly ActiveEnd { get; set; } = new(18, 0);
     public bool StartWithWindows { get; set; }
     public bool StartMinimized { get; set; } = true;
+    public ObservableCollection<CustomAlarmSetting> CustomAlarms { get; set; } = [];
 
     [JsonPropertyName("RemindersEnabled"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? LegacyRemindersEnabled { get; set; }
@@ -43,6 +47,13 @@ public sealed class AppSettings
     {
         ReminderIntervalMinutes = Math.Clamp(ReminderIntervalMinutes, MinReminderMinutes, MaxReminderMinutes);
         PopupDismissSeconds = Math.Clamp(PopupDismissSeconds, MinPopupDismissSeconds, MaxPopupDismissSeconds);
+        CustomAlarms ??= [];
+        foreach (var alarm in CustomAlarms)
+        {
+            alarm.Id = alarm.Id == Guid.Empty ? Guid.NewGuid() : alarm.Id;
+            alarm.IntervalMinutes = Math.Clamp(alarm.IntervalMinutes, 1, 1440);
+            alarm.Content = string.IsNullOrWhiteSpace(alarm.Content) ? "알람 시간입니다." : alarm.Content.Trim()[..Math.Min(alarm.Content.Trim().Length, 200)];
+        }
 
         if (LegacyInactiveSchedule is not null)
             MigrateInactiveSchedule();
@@ -104,3 +115,32 @@ public sealed class DailySchedule
 }
 
 public enum NotificationSound { Asterisk, Exclamation, Beep }
+public enum CustomAlarmType { Periodic, DailyTime }
+
+public sealed class CustomAlarmSetting : INotifyPropertyChanged
+{
+    private Guid _id = Guid.NewGuid();
+    private bool _isEnabled = true;
+    private CustomAlarmType _type;
+    private int _intervalMinutes = 60;
+    private TimeOnly _time = new(9, 0);
+    private string _content = "알람 시간입니다.";
+    public Guid Id { get => _id; set => Set(ref _id, value); }
+    public bool IsEnabled { get => _isEnabled; set => Set(ref _isEnabled, value); }
+    public CustomAlarmType Type { get => _type; set => Set(ref _type, value); }
+    public int IntervalMinutes { get => _intervalMinutes; set => Set(ref _intervalMinutes, value); }
+    public TimeOnly Time { get => _time; set => Set(ref _time, value); }
+    public string Content { get => _content; set => Set(ref _content, value); }
+    [JsonIgnore] public string TypeLabel => Type == CustomAlarmType.Periodic ? "주기적" : "매일 특정 시간";
+    [JsonIgnore] public string ScheduleLabel => Type == CustomAlarmType.Periodic ? $"{IntervalMinutes}분마다" : Time.ToString("HH:mm");
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value)) return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        if (name is nameof(Type)) PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TypeLabel)));
+        if (name is nameof(Type) or nameof(IntervalMinutes) or nameof(Time))
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ScheduleLabel)));
+    }
+}

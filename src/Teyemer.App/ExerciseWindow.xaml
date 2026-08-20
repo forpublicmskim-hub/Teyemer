@@ -1,9 +1,9 @@
 <Window x:Class="Teyemer.App.ExerciseWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="눈 운동" Width="520" Height="340" Topmost="True" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" Background="Transparent">
  <Grid Background="Transparent">
-  <Border Margin="20" Padding="28" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="24">
+  <Border Margin="20" Padding="28" Background="{DynamicResource GlassSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="24">
    <Border.Effect><DropShadowEffect BlurRadius="28" ShadowDepth="8" Opacity="0.22" Color="#101828"/></Border.Effect>
    <Grid><Ellipse Width="190" Height="190" Fill="{DynamicResource IconBackgroundBrush}" Opacity="0.3" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-    <StackPanel VerticalAlignment="Center"><TextBlock Text="먼 곳을 바라보세요" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock x:Name="Countdown" Text="20" FontSize="88" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/><TextBlock Text="천천히 눈을 깜빡이며 편안하게 쉬세요." Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/><WrapPanel HorizontalAlignment="Center" Margin="0,16,0,0"><Button Content="완료" Style="{StaticResource PrimaryButtonStyle}" Click="Complete_Click"/><Button Content="건너뛰기" Click="Skip_Click"/></WrapPanel></StackPanel>
+    <StackPanel VerticalAlignment="Center"><TextBlock Text="먼 곳을 바라보세요" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock x:Name="Countdown" Text="20" FontSize="88" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/><TextBlock Text="천천히 눈을 깜빡이며 편안하게 쉬세요." Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0"><Button Content="건너뛰기" Style="{StaticResource ActionButtonStyle}" Click="Skip_Click"/><Button Content="완료" Style="{StaticResource PrimaryActionButtonStyle}" Click="Complete_Click"/></StackPanel></StackPanel>
    </Grid>
   </Border>
  </Grid>

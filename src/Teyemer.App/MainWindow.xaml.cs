@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
+using System.Windows.Controls;
+using Teyemer.Core;
 namespace Teyemer.App;
 public partial class MainWindow : Window
 {
@@ -23,6 +25,13 @@ public partial class MainWindow : Window
  private void OnLoaded(object sender, RoutedEventArgs e) => StartBorderAnimation();
  private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) { if (IsVisible) StartBorderAnimation(); else StopBorderAnimation(); }
  private void OnThemeChanged(object? sender, EventArgs e) { StopBorderAnimation(); ConfigureBorderHighlight(); StartBorderAnimation(); }
+ private async void AlarmEnabled_Click(object sender, RoutedEventArgs e)
+ {
+  if (sender is not System.Windows.Controls.CheckBox checkBox || checkBox.DataContext is not CustomAlarmSetting alarm || DataContext is not MainViewModel viewModel) return;
+  checkBox.IsEnabled = false;
+  try { await viewModel.SetAlarmEnabledAsync(alarm, checkBox.IsChecked == true); }
+  finally { checkBox.IsEnabled = true; }
+ }
  private void OnClosed(object? sender, EventArgs e)
  {
   StopBorderAnimation();

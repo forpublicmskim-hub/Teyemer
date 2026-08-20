@@ -12,6 +12,7 @@ public static class ThemeService
 {
     private static bool _isDark;
     private static bool _hasApplied;
+    public static bool IsDark => _isDark;
     public static event EventHandler? ThemeChanged;
     public static void Apply(bool dark)
     {
@@ -19,20 +20,32 @@ public static class ThemeService
         _hasApplied = true;
         _isDark = dark;
         var resources = System.Windows.Application.Current.Resources;
-        Set(resources, "WindowBackgroundBrush", dark ? "#B8171B22" : "#CFF4F6F8");
-        Set(resources, "SurfaceBrush", dark ? "#D620252E" : "#DCFFFFFF");
-        Set(resources, "ElevatedSurfaceBrush", dark ? "#E6272D38" : "#EBFFFFFF");
-        Set(resources, "TextBrush", dark ? "#F1F4F8" : "#182230");
-        Set(resources, "SecondaryTextBrush", dark ? "#B7C0CC" : "#52606D");
-        Set(resources, "BorderBrush", dark ? "#A0414A58" : "#B8CBD2D9");
-        Set(resources, "ControlBrush", dark ? "#C42B323E" : "#D9FFFFFF");
-        Set(resources, "HoverBrush", dark ? "#B0343D4A" : "#C4E9EEF5");
-        Set(resources, "SelectionBrush", dark ? "#C42D4B70" : "#D9D8E8FF");
-        Set(resources, "AccentBrush", dark ? "#6EA8FE" : "#2563A9");
-        Set(resources, "AccentHoverBrush", dark ? "#8AB9FF" : "#1E4F88");
-        Set(resources, "AccentTextBrush", dark ? "#101820" : "#FFFFFF");
-        Set(resources, "ErrorBrush", dark ? "#FF9B95" : "#B42318");
-        Set(resources, "IconBackgroundBrush", dark ? "#B8263F63" : "#CCDCEAFF");
+        Set(resources, "WindowBackgroundBrush", dark ? "#B3141820" : "#C2FFF8F0");
+        Set(resources, "SurfaceBrush", dark ? "#C71D232C" : "#E8FFFEFC");
+        Set(resources, "ElevatedSurfaceBrush", dark ? "#DE252C37" : "#F2FFF9F2");
+        Set(resources, "TextBrush", dark ? "#F8FAFC" : "#2A1F18");
+        Set(resources, "SecondaryTextBrush", dark ? "#C9D2DE" : "#6B4C3A");
+        Set(resources, "BorderBrush", dark ? "#CC596577" : "#D8D9B99E");
+        Set(resources, "ControlBrush", dark ? "#E12A323E" : "#FAFFFCF8");
+        Set(resources, "HoverBrush", dark ? "#E13B4656" : "#F5FFF0D9");
+        Set(resources, "SelectionBrush", dark ? "#E3344D6D" : "#F5FFE0B8");
+        Set(resources, "AccentBrush", dark ? "#7DB4FF" : "#D94A1A");
+        Set(resources, "AccentHoverBrush", dark ? "#9BC5FF" : "#B93812");
+        Set(resources, "AccentTextBrush", dark ? "#0B1520" : "#FFFFFF");
+        Set(resources, "ErrorBrush", dark ? "#FFB4AE" : "#B42318");
+        Set(resources, "IconBackgroundBrush", dark ? "#D12A466C" : "#EBFFE0B8");
+        Set(resources, "TableHeaderBrush", dark ? "#F02B3441" : "#FFFFF3E5");
+        Set(resources, "TableAlternateBrush", dark ? "#D9232A34" : "#FFFFFBF6");
+        Set(resources, "TableGridBrush", dark ? "#B6505C6D" : "#FFE8D2BC");
+        Set(resources, "TabBarBrush", "#00000000");
+        Set(resources, "TabIdleBrush", dark ? "#FF1C212B" : "#99FFEEDB");
+        Set(resources, "TabHoverBrush", dark ? "#FF282F3B" : "#CCFFD59D");
+        Set(resources, "TabSelectedBrush", dark ? "#FF315A85" : "#E6E85D16");
+        Set(resources, "TabSelectedTextBrush", dark ? "#FFF8FAFC" : "#FFFFFFFF");
+        SetGradient(resources, "GlassSurfaceBrush",
+            dark ? ["#EA262D38", "#C6181D25", "#DB222A35"] : ["#F2FFFFFF", "#D8FFF4E8", "#E8FFFCF7"]);
+        SetGradient(resources, "GlassElevatedSurfaceBrush",
+            dark ? ["#F02D3542", "#D51C222B", "#E928313D"] : ["#FAFFFFFF", "#E8FFF0DE", "#F3FFFBF4"]);
         foreach (Window window in System.Windows.Application.Current.Windows) ApplyNativeWindow(window, dark);
         ThemeChanged?.Invoke(null, EventArgs.Empty);
     }
@@ -50,13 +63,29 @@ public static class ThemeService
     public static void ApplyTo(Forms.ContextMenuStrip? menu, bool dark)
     {
         if (menu is null) return;
-        menu.BackColor = Html(dark ? "#20252E" : "#FFFFFF");
-        menu.ForeColor = Html(dark ? "#F1F4F8" : "#182230");
+        menu.BackColor = Html(dark ? "#20252E" : "#FFFCF8");
+        menu.ForeColor = Html(dark ? "#F1F4F8" : "#2A1F18");
         menu.Renderer = new Forms.ToolStripProfessionalRenderer(new MenuColorTable(dark));
-        foreach (Forms.ToolStripItem item in menu.Items) { item.BackColor = menu.BackColor; item.ForeColor = menu.ForeColor; }
+        foreach (Forms.ToolStripItem item in menu.Items)
+        {
+            item.BackColor = menu.BackColor;
+            item.ForeColor = menu.ForeColor;
+            item.Padding = item is Forms.ToolStripSeparator
+                ? Forms.Padding.Empty
+                : new Forms.Padding(8, 4, 8, 4);
+        }
     }
 
     private static void Set(ResourceDictionary resources, string key, string color) => resources[key] = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(color));
+    private static void SetGradient(ResourceDictionary resources, string key, string[] colors)
+    {
+        var brush = new LinearGradientBrush { StartPoint = new System.Windows.Point(0, 0), EndPoint = new System.Windows.Point(1, 1) };
+        brush.GradientStops.Add(new GradientStop(ParseColor(colors[0]), 0));
+        brush.GradientStops.Add(new GradientStop(ParseColor(colors[1]), 0.58));
+        brush.GradientStops.Add(new GradientStop(ParseColor(colors[2]), 1));
+        resources[key] = brush;
+    }
+    private static System.Windows.Media.Color ParseColor(string value) => (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(value);
     private static Drawing.Color Html(string value) => Drawing.ColorTranslator.FromHtml(value);
 
     private static void ApplyNativeWindow(Window window, bool dark)
@@ -75,7 +104,7 @@ public static class ThemeService
         DwmExtendFrameIntoClientArea(handle, ref margins);
         var corner = 2;
         DwmSetWindowAttribute(handle, 33, ref corner, sizeof(int));
-        var border = ColorRef(dark ? "#414A58" : "#CBD2D9");
+        var border = ColorRef(dark ? "#414A58" : "#D9B99E");
         var caption = unchecked((int)0xFFFFFFFF);
         var text = unchecked((int)0xFFFFFFFF);
         DwmSetWindowAttribute(handle, 34, ref border, sizeof(int));
@@ -94,13 +123,13 @@ public static class ThemeService
 
     private sealed class MenuColorTable(bool dark) : Forms.ProfessionalColorTable
     {
-        public override Drawing.Color ToolStripDropDownBackground => Html(dark ? "#20252E" : "#FFFFFF");
-        public override Drawing.Color MenuItemSelected => Html(dark ? "#343D4A" : "#E9EEF5");
-        public override Drawing.Color MenuItemBorder => Html(dark ? "#414A58" : "#CBD2D9");
+        public override Drawing.Color ToolStripDropDownBackground => Html(dark ? "#20252E" : "#FFFCF8");
+        public override Drawing.Color MenuItemSelected => Html(dark ? "#343D4A" : "#FFF0D9");
+        public override Drawing.Color MenuItemBorder => Html(dark ? "#414A58" : "#D9B99E");
         public override Drawing.Color ImageMarginGradientBegin => ToolStripDropDownBackground;
         public override Drawing.Color ImageMarginGradientMiddle => ToolStripDropDownBackground;
         public override Drawing.Color ImageMarginGradientEnd => ToolStripDropDownBackground;
-        public override Drawing.Color SeparatorDark => Html(dark ? "#414A58" : "#CBD2D9");
+        public override Drawing.Color SeparatorDark => Html(dark ? "#414A58" : "#E8D2BC");
         public override Drawing.Color SeparatorLight => ToolStripDropDownBackground;
     }
 }

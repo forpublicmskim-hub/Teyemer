@@ -1,6 +1,9 @@
 using Teyemer.App;
 using Teyemer.Core;
 using Teyemer.Infrastructure;
+using System.Windows.Data;
+using System.IO;
+using System.Threading;
 
 var tests = new (string, Func<Task>)[]
 {
@@ -22,6 +25,12 @@ var tests = new (string, Func<Task>)[]
     ("자동 닫힘 범위", () => Sync(PopupRange)),
     ("기본 다크 모드", () => Sync(() => A.True(D().UseDarkMode))),
     ("적응형 폴링", () => Sync(AdaptivePolling))
+    ,("주기 사용자 알람", () => Sync(PeriodicCustomAlarm))
+    ,("특정 시간 사용자 알람", () => Sync(DailyCustomAlarm))
+    ,("사용자 알람 미누적", () => Sync(CustomAlarmNoBacklog))
+    ,("Daily 현재 분 저장", () => Sync(DailyCurrentMinute))
+    ,("사용자 알람 유형 시간 저장", CustomAlarmSettingsRoundTrip)
+    ,("사용자 알람 Picker 바인딩", CustomAlarmPickerBinding)
 };
 
 var failed = 0;
@@ -235,6 +244,106 @@ static void AdaptivePolling()
     A.Eq(TimeSpan.FromSeconds(5), AppController.GetNextTickInterval(new(ReminderState.Running, now, now.AddMinutes(3), null, null), false));
     A.Eq(TimeSpan.FromSeconds(1), AppController.GetNextTickInterval(new(ReminderState.Running, now, now.AddSeconds(45), null, null), false));
     A.Eq(TimeSpan.FromSeconds(5), AppController.GetNextTickInterval(new(ReminderState.SessionInactive, now, null, null, null), false));
+}
+
+static void PeriodicCustomAlarm()
+{
+    var now = At(17, 10);
+    var alarm = new CustomAlarmSetting { Type = CustomAlarmType.Periodic, IntervalMinutes = 10, Content = "물 마시기" };
+    var scheduler = new CustomAlarmScheduler();
+    scheduler.Reset([alarm], now);
+    A.Eq(0, scheduler.Tick([alarm], now.AddMinutes(9), true).Count);
+    var due = scheduler.Tick([alarm], now.AddMinutes(10), true);
+    A.Eq(1, due.Count);
+    A.Eq("물 마시기", due[0].Content);
+    A.Eq(0, scheduler.Tick([alarm], now.AddMinutes(10), true).Count);
+}
+
+static void DailyCustomAlarm()
+{
+    var now = At(17, 8);
+    var alarm = new CustomAlarmSetting { Type = CustomAlarmType.DailyTime, Time = new TimeOnly(9, 30), Content = "회의" };
+    var scheduler = new CustomAlarmScheduler();
+    scheduler.Reset([alarm], now);
+    A.Eq(0, scheduler.Tick([alarm], At(17, 9, 29), true).Count);
+    A.Eq(1, scheduler.Tick([alarm], At(17, 9, 30), true).Count);
+    A.Eq(0, scheduler.Tick([alarm], At(17, 9, 31), true).Count);
+    A.Eq(1, scheduler.Tick([alarm], At(18, 9, 30), true).Count);
+}
+
+static void CustomAlarmNoBacklog()
+{
+    var now = At(17, 8);
+    var alarm = new CustomAlarmSetting { Type = CustomAlarmType.Periodic, IntervalMinutes = 5 };
+    var scheduler = new CustomAlarmScheduler();
+    scheduler.Reset([alarm], now);
+    A.Eq(0, scheduler.Tick([alarm], At(17, 9), false).Count);
+    A.Eq(0, scheduler.Tick([alarm], At(17, 9, 1), true).Count);
+    A.Eq(1, scheduler.Tick([alarm], At(17, 9, 5), true).Count);
+}
+
+static void DailyCurrentMinute()
+{
+    var alarm = new CustomAlarmSetting { Type = CustomAlarmType.DailyTime, Time = new TimeOnly(11, 30) };
+    var now = At(17, 11, 30).AddSeconds(35);
+    var scheduler = new CustomAlarmScheduler();
+    scheduler.Reset([alarm], now);
+    A.Eq(1, scheduler.Tick([alarm], now, true).Count);
+    A.Eq(0, scheduler.Tick([alarm], now.AddSeconds(1), true).Count);
+}
+
+static async Task CustomAlarmSettingsRoundTrip()
+{
+    var path = Path.Combine(Path.GetTempPath(), $"teyemer-custom-{Guid.NewGuid():N}.json");
+    try
+    {
+        var settings = D();
+        settings.CustomAlarms.Add(new CustomAlarmSetting
+        {
+            Type = CustomAlarmType.DailyTime,
+            Time = new TimeOnly(14, 25),
+            IntervalMinutes = 90,
+            Content = "저장 확인"
+        });
+        var store = new JsonSettingsStore(path);
+        await store.SaveAsync(settings);
+        var loaded = await store.LoadAsync();
+        A.Eq(1, loaded.CustomAlarms.Count);
+        A.Eq(CustomAlarmType.DailyTime, loaded.CustomAlarms[0].Type);
+        A.Eq(new TimeOnly(14, 25), loaded.CustomAlarms[0].Time);
+        A.Eq("저장 확인", loaded.CustomAlarms[0].Content);
+    }
+    finally { DeleteSettingsFiles(path); }
+}
+
+static Task CustomAlarmPickerBinding()
+{
+    Exception? failure = null;
+    var thread = new Thread(() =>
+    {
+        try
+        {
+            var alarm = new CustomAlarmSetting();
+            var typePicker = new AlarmTypePicker();
+            BindingOperations.SetBinding(typePicker, AlarmTypePicker.SelectedTypeProperty,
+                new Binding(nameof(CustomAlarmSetting.Type)) { Source = alarm, Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
+            typePicker.TypePicker.SelectedIndex = 1;
+            A.Eq(CustomAlarmType.DailyTime, alarm.Type);
+
+            var timePicker = new TimePicker();
+            BindingOperations.SetBinding(timePicker, TimePicker.SelectedTimeProperty,
+                new Binding(nameof(CustomAlarmSetting.Time)) { Source = alarm, Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
+            timePicker.HourPicker.SelectedIndex = 14;
+            timePicker.MinutePicker.SelectedIndex = 25;
+            A.Eq(new TimeOnly(14, 25), alarm.Time);
+        }
+        catch (Exception ex) { failure = ex; }
+    });
+    thread.SetApartmentState(ApartmentState.STA);
+    thread.Start();
+    thread.Join();
+    if (failure is not null) throw failure;
+    return Task.CompletedTask;
 }
 
 static class A

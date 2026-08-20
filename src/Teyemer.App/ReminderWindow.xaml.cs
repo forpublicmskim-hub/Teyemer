@@ -15,6 +15,7 @@ public partial class ReminderWindow : Window
  private readonly Storyboard _emphasisStoryboard = new();
  private bool _isDismissing;
  public ReminderWindow(bool isPreview = false, int dismissSeconds = 30) { InitializeComponent(); PreviewLabel.Visibility = isPreview ? Visibility.Visible : Visibility.Collapsed; ConfigureBorderHighlight(); ConfigureEmphasisAnimation(); _dismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(dismissSeconds) }; _dismissTimer.Tick += OnDismiss; Loaded += OnLoaded; Closed += OnClosed; }
+ public ReminderWindow(string content, int dismissSeconds) : this(false, dismissSeconds) { ReminderTitle.Text = "알람 시간입니다"; ReminderContent.Text = content; ExerciseActions.Visibility = Visibility.Collapsed; AlarmCloseButton.Visibility = Visibility.Visible; }
 
  protected override void OnSourceInitialized(EventArgs e)
  {
@@ -58,10 +59,20 @@ public partial class ReminderWindow : Window
 
  private void ConfigureEmphasisAnimation()
  {
- _emphasisStoryboard.RepeatBehavior = RepeatBehavior.Forever;
-  _emphasisStoryboard.Children.Add(CreateGlowMovement(AmbientGlow, 0, 330, 4.8, 0.07, 0.14));
-  _emphasisStoryboard.Children.Add(CreateGlowMovement(HighlightGlow, 310, -20, 6.2, 0.04, 0.09));
-  _emphasisStoryboard.Children.Add(CreateBorderPulse(AnimatedBorder));
+  _emphasisStoryboard.RepeatBehavior = RepeatBehavior.Forever;
+  if (ThemeService.IsDark)
+  {
+   _emphasisStoryboard.Children.Add(CreateGlowMovement(AmbientGlow, 0, 330, 4.8, 0.07, 0.14));
+   _emphasisStoryboard.Children.Add(CreateGlowMovement(HighlightGlow, 310, -20, 6.2, 0.04, 0.09));
+   _emphasisStoryboard.Children.Add(CreateBorderPulse(AnimatedBorder, 0.48, 0.9, 1.8));
+   return;
+  }
+
+  AmbientGlow.Opacity = 0.045;
+  HighlightGlow.Opacity = 0.025;
+  _emphasisStoryboard.Children.Add(CreateOpacityPulse(AmbientGlow, 0.025, 0.065, 4.6));
+  _emphasisStoryboard.Children.Add(CreateOpacityPulse(HighlightGlow, 0.015, 0.045, 5.8));
+  _emphasisStoryboard.Children.Add(CreateBorderPulse(AnimatedBorder, 0.28, 0.58, 3.4));
  }
 
  private void GlowClipHost_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -72,6 +83,7 @@ public partial class ReminderWindow : Window
 
  private void ConfigureBorderHighlight()
  {
+  var dark = ThemeService.IsDark;
   var accent = (System.Windows.Application.Current.Resources["AccentBrush"] as SolidColorBrush)?.Color ?? System.Windows.Media.Color.FromRgb(37, 99, 169);
   var rotation = new RotateTransform(0, 0.5, 0.5);
   AnimatedBorder.BorderBrush = new LinearGradientBrush
@@ -82,23 +94,36 @@ public partial class ReminderWindow : Window
    GradientStops =
    {
     new GradientStop(System.Windows.Media.Color.FromArgb(0, accent.R, accent.G, accent.B), 0.00),
-    new GradientStop(System.Windows.Media.Color.FromArgb(38, accent.R, accent.G, accent.B), 0.20),
-    new GradientStop(System.Windows.Media.Color.FromArgb(230, accent.R, accent.G, accent.B), 0.46),
-    new GradientStop(System.Windows.Media.Color.FromArgb(80, accent.R, accent.G, accent.B), 0.60),
+    new GradientStop(System.Windows.Media.Color.FromArgb(dark ? (byte)38 : (byte)22, accent.R, accent.G, accent.B), 0.20),
+    new GradientStop(System.Windows.Media.Color.FromArgb(dark ? (byte)230 : (byte)150, accent.R, accent.G, accent.B), 0.46),
+    new GradientStop(System.Windows.Media.Color.FromArgb(dark ? (byte)80 : (byte)42, accent.R, accent.G, accent.B), 0.60),
     new GradientStop(System.Windows.Media.Color.FromArgb(0, accent.R, accent.G, accent.B), 1.00)
    }
   };
-  AnimatedBorder.Effect = new DropShadowEffect { BlurRadius = 9, ShadowDepth = 0, Opacity = 0.34, Color = accent };
+  AnimatedBorder.Effect = new DropShadowEffect { BlurRadius = dark ? 9 : 7, ShadowDepth = 0, Opacity = dark ? 0.34 : 0.18, Color = accent };
 
-  var orbit = new DoubleAnimation(0, 360, TimeSpan.FromSeconds(5.6)) { RepeatBehavior = RepeatBehavior.Forever };
+  var orbit = new DoubleAnimation(0, 360, TimeSpan.FromSeconds(dark ? 5.6 : 12)) { RepeatBehavior = RepeatBehavior.Forever };
   Storyboard.SetTarget(orbit, rotation);
   Storyboard.SetTargetProperty(orbit, new PropertyPath(RotateTransform.AngleProperty));
   _emphasisStoryboard.Children.Add(orbit);
  }
 
- private static Timeline CreateBorderPulse(FrameworkElement target)
+ private static Timeline CreateBorderPulse(FrameworkElement target, double minimumOpacity, double maximumOpacity, double seconds)
  {
-  var pulse = new DoubleAnimation(0.48, 0.9, TimeSpan.FromSeconds(1.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
+  var pulse = new DoubleAnimation(minimumOpacity, maximumOpacity, TimeSpan.FromSeconds(seconds)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
+  Storyboard.SetTarget(pulse, target);
+  Storyboard.SetTargetProperty(pulse, new PropertyPath(UIElement.OpacityProperty));
+  return pulse;
+ }
+
+ private static Timeline CreateOpacityPulse(FrameworkElement target, double minimumOpacity, double maximumOpacity, double seconds)
+ {
+  var pulse = new DoubleAnimation(minimumOpacity, maximumOpacity, TimeSpan.FromSeconds(seconds))
+  {
+   AutoReverse = true,
+   RepeatBehavior = RepeatBehavior.Forever,
+   EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+  };
   Storyboard.SetTarget(pulse, target);
   Storyboard.SetTargetProperty(pulse, new PropertyPath(UIElement.OpacityProperty));
   return pulse;
