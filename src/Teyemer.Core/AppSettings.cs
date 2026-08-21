@@ -14,7 +14,7 @@ public sealed class AppSettings
     public const int MaxPopupDismissSeconds = 60;
 
     public int ReminderIntervalMinutes { get; set; } = 20;
-    public bool ShowPopup { get; set; } = true;
+
     public bool PlaySound { get; set; } = true;
     public NotificationSound Sound { get; set; } = NotificationSound.Asterisk;
     public int PopupDismissSeconds { get; set; } = 30;

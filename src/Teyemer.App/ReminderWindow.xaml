@@ -11,13 +11,10 @@
     <Ellipse.Effect><BlurEffect Radius="36"/></Ellipse.Effect>
     <Ellipse.RenderTransform><TranslateTransform/></Ellipse.RenderTransform>
    </Ellipse>
-   <Grid Margin="22"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-   <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-    <StackPanel Orientation="Horizontal"><Border Width="36" Height="36" Background="{DynamicResource IconBackgroundBrush}" CornerRadius="18"><TextBlock Text="◉" FontSize="19" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="12,0,0,0"><TextBlock Text="Teyemer" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock x:Name="ReminderTitle" Text="눈 운동 시간입니다" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/></StackPanel></StackPanel>
-    <Button Grid.Column="1" Content="×" Width="30" Height="30" Padding="0" Background="Transparent" BorderThickness="0" FontSize="19" Foreground="{DynamicResource SecondaryTextBrush}" Click="Close_Click"/>
-   </Grid>
-   <TextBlock x:Name="ReminderContent" Grid.Row="1" Text="잠시 화면에서 눈을 떼고 먼 곳을 바라보세요." TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,16,0,14"/>
-   <StackPanel Grid.Row="2"><TextBlock x:Name="PreviewLabel" Text="미리 보기 알림" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="0,0,0,8" Visibility="Collapsed"/><StackPanel x:Name="ExerciseActions" Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="건너뛰기" Style="{StaticResource ActionButtonStyle}" Click="Skip_Click"/><Button Content="5분 뒤" Style="{StaticResource ActionButtonStyle}" Click="Snooze_Click"/><Button Content="운동 시작" Style="{StaticResource PrimaryActionButtonStyle}" Click="Start_Click"/></StackPanel><Button x:Name="AlarmCloseButton" Content="확인" Style="{StaticResource PrimaryActionButtonStyle}" HorizontalAlignment="Right" Visibility="Collapsed" Click="Close_Click"/></StackPanel>
+   <Grid Margin="22,20"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <Border Width="42" Height="42" Margin="0,2,0,0" Background="{DynamicResource IconBackgroundBrush}" CornerRadius="21" VerticalAlignment="Top"><TextBlock Text="◉" FontSize="21" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+    <StackPanel Grid.Column="1" Margin="14,0,14,0" VerticalAlignment="Center"><TextBlock Text="Teyemer" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"/><TextBlock x:Name="ReminderTitle" Text="눈 운동 시간입니다" Margin="0,2,0,0" FontSize="19" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/><TextBlock x:Name="ReminderContent" Text="잠시 화면에서 눈을 떼고 먼 곳을 바라보세요." TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,0"/></StackPanel>
+    <Button Grid.Column="2" Content="×" Width="30" Height="30" Padding="0" Background="Transparent" BorderThickness="0" FontSize="19" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Top" Click="Close_Click"/>
    </Grid>
   </Grid>
  </Border>

@@ -18,7 +18,7 @@ public sealed class AppController : IDisposable
     private readonly CustomAlarmScheduler _customAlarmScheduler = new();
     private readonly Queue<string> _customAlarmQueue = new();
     private AppSettings _settings; private ReminderEngine _engine; private MainWindow? _main; private MainViewModel? _viewModel;
-    private ReminderWindow? _reminder; private ExerciseWindow? _exercise; private bool _dueHandled;
+    private ReminderWindow? _reminder; private ExerciseWindow? _exercise; private SecondsClockWindow? _secondsClock; private bool _dueHandled;
     private string? _lastStatusText;
     public static bool IsExiting { get; private set; }
     public AppController(AppSettings settings, ISettingsStore store, IStartupRegistrationService startup)
@@ -35,6 +35,8 @@ public sealed class AppController : IDisposable
             Padding = new Forms.Padding(4)
         };
         menu.Items.Add("상태 확인 중…").Name = "status"; menu.Items[0].Enabled = false;
+        menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add("초 시계", null, (_, _) => ShowSecondsClock());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("지금 눈 운동하기", null, (_, _) => StartExercise());
         menu.Items.Add("30분 동안 일시정지", null, (_, _) => { _engine.PauseUntil(DateTimeOffset.Now.AddMinutes(30)); _dueHandled = false; OnTick(null, EventArgs.Empty); });
@@ -86,13 +88,10 @@ public sealed class AppController : IDisposable
     private void ShowReminder(bool isPreview = false)
     {
         if (_settings.PlaySound) PlaySelectedSound();
-        if (!isPreview && !_settings.ShowPopup) { _tray.ShowBalloonTip(5000, "Teyemer", "눈 운동 시간입니다. 트레이 메뉴에서 운동을 시작하세요.", Forms.ToolTipIcon.Info); return; }
         if (_reminder is not null) return;
         var dismissSeconds = Math.Clamp(_settings.PopupDismissSeconds, AppSettings.MinPopupDismissSeconds, AppSettings.MaxPopupDismissSeconds);
-        _reminder = new ReminderWindow(isPreview, dismissSeconds);
-        _reminder.StartRequested += (_, _) => { _reminder.Close(); StartExercise(); };
-        _reminder.SnoozeRequested += (_, _) => { if (!isPreview) _engine.Snooze(DateTimeOffset.Now, TimeSpan.FromMinutes(5)); _reminder.Close(); };
-        _reminder.SkipRequested += (_, _) => { if (!isPreview) _engine.Skip(DateTimeOffset.Now); _reminder.Close(); };
+        _reminder = new ReminderWindow(dismissSeconds);
+        _reminder.Dismissed += (_, _) => { if (!isPreview) _engine.Skip(DateTimeOffset.Now); _reminder.Close(); };
         _reminder.Closed += (_, _) => _reminder = null; _reminder.Show();
     }
     public void PreviewReminder() => ShowReminder(true);
@@ -101,10 +100,9 @@ public sealed class AppController : IDisposable
         if (_reminder is not null || _customAlarmQueue.Count == 0) return;
         var content = _customAlarmQueue.Dequeue();
         if (_settings.PlaySound) PlaySelectedSound();
-        if (!_settings.ShowPopup) { _tray.ShowBalloonTip(5000, "Teyemer", content, Forms.ToolTipIcon.Info); return; }
         var dismissSeconds = Math.Clamp(_settings.PopupDismissSeconds, AppSettings.MinPopupDismissSeconds, AppSettings.MaxPopupDismissSeconds);
         _reminder = new ReminderWindow(content, dismissSeconds);
-        _reminder.SkipRequested += (_, _) => _reminder?.Close();
+        _reminder.Dismissed += (_, _) => _reminder?.Close();
         _reminder.Closed += (_, _) => { _reminder = null; ShowNextCustomAlarm(); };
         _reminder.Show();
     }
@@ -114,6 +112,18 @@ public sealed class AppController : IDisposable
         _engine.StartExercise(); _exercise = new ExerciseWindow();
         _exercise.Finished += (_, completed) => { if (completed) _engine.CompleteExercise(DateTimeOffset.Now); else _engine.Skip(DateTimeOffset.Now); _exercise.Close(); };
         _exercise.Closed += (_, _) => { if (_engine.State == ReminderState.Exercising) _engine.Skip(DateTimeOffset.Now); _exercise = null; OnTick(null, EventArgs.Empty); }; _exercise.Show(); OnTick(null, EventArgs.Empty);
+    }
+    private void ShowSecondsClock()
+    {
+        if (_secondsClock is not null) return;
+        _secondsClock = new SecondsClockWindow();
+        _secondsClock.Closed += OnSecondsClockClosed;
+        _secondsClock.Show();
+    }
+    private void OnSecondsClockClosed(object? sender, EventArgs e)
+    {
+        if (sender is SecondsClockWindow window) window.Closed -= OnSecondsClockClosed;
+        if (ReferenceEquals(sender, _secondsClock)) _secondsClock = null;
     }
     public void PlaySelectedSound() { if (!_settings.PlaySound) return; (_settings.Sound switch { NotificationSound.Exclamation => SystemSounds.Exclamation, NotificationSound.Beep => SystemSounds.Beep, _ => SystemSounds.Asterisk }).Play(); }
     public void PreviewTheme(bool dark) { ThemeService.Apply(dark); ThemeService.ApplyTo(_trayMenu, dark); }
@@ -164,6 +174,7 @@ public sealed class AppController : IDisposable
         _main?.Close();
         _reminder?.Close();
         _exercise?.Close();
+        _secondsClock?.Close();
         System.Windows.Application.Current.Shutdown();
     }
     public void Dispose()
@@ -177,6 +188,7 @@ public sealed class AppController : IDisposable
         _trayMenuInteraction = null;
         if (menu is not null) menu.Opening -= OnTrayMenuOpening;
         _trayMenu = null;
+        _secondsClock?.Close();
         _tray.Visible = false;
         _tray.Dispose();
         menu?.Dispose();

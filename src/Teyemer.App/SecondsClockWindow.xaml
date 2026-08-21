@@ -1,0 +1,45 @@
+<Window x:Class="Teyemer.App.SecondsClockWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="초 시계" Width="360" Height="172" WindowStyle="None" AllowsTransparency="True"
+ Background="Transparent" ShowInTaskbar="False" ShowActivated="False" Topmost="True" ResizeMode="NoResize"
+ WindowStartupLocation="CenterScreen" UseLayoutRounding="True" SnapsToDevicePixels="True">
+ <Grid>
+  <Border Margin="14" Background="{DynamicResource GlassElevatedSurfaceBrush}" MouseLeftButtonDown="Surface_MouseLeftButtonDown" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="18">
+   <Border.Effect><DropShadowEffect BlurRadius="24" ShadowDepth="5" Opacity="0.28" Color="#101828"/></Border.Effect>
+   <Grid x:Name="GlowClipHost" SizeChanged="GlowClipHost_SizeChanged">
+    <Ellipse x:Name="AmbientGlow" Width="240" Height="150" Margin="80,52,-80,-70" HorizontalAlignment="Right" VerticalAlignment="Bottom" Fill="{DynamicResource AccentBrush}" Opacity="0.05" IsHitTestVisible="False">
+     <Ellipse.Effect><BlurEffect Radius="44"/></Ellipse.Effect>
+    </Ellipse>
+    <Grid Margin="22,17,18,18">
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+     <Grid>
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+       <Border Width="30" Height="30" Background="{DynamicResource IconBackgroundBrush}" CornerRadius="15"><TextBlock Text="◷" FontSize="17" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+       <TextBlock Text="초 시계" Margin="10,0,0,0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+      </StackPanel>
+      <Button HorizontalAlignment="Right" Content="×" Width="30" Height="30" Margin="0" Padding="0" Background="Transparent" BorderThickness="0" FontSize="19" Foreground="{DynamicResource SecondaryTextBrush}" Click="Close_Click" AutomationProperties.Name="초 시계 닫기"/>
+     </Grid>
+     <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,8,0,0" TextElement.FontFamily="Consolas">
+      <StackPanel Orientation="Horizontal">
+       <TextBlock x:Name="HoursText" Text="00" FontSize="42" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+       <TextBlock Text=":" Margin="3,0" FontSize="42" FontWeight="Light" Foreground="{DynamicResource SecondaryTextBrush}"/>
+       <TextBlock x:Name="MinutesText" Text="00" FontSize="42" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+       <TextBlock Text=":" Margin="3,0" FontSize="42" FontWeight="Light" Foreground="{DynamicResource SecondaryTextBrush}"/>
+       <Grid Width="58">
+        <TextBlock x:Name="SecondsText" Text="00" FontSize="42" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" HorizontalAlignment="Center" RenderTransformOrigin="0.5,0.55">
+         <TextBlock.RenderTransform><ScaleTransform x:Name="SecondsScale" ScaleX="1" ScaleY="1"/></TextBlock.RenderTransform>
+        </TextBlock>
+        <TextBlock x:Name="SecondsAccentText" Text="00" FontSize="42" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Opacity="0" IsHitTestVisible="False" RenderTransformOrigin="0.5,0.55">
+         <TextBlock.Effect><DropShadowEffect x:Name="SecondsGlow" BlurRadius="12" ShadowDepth="0" Opacity="0.2" Color="#7DB4FF"/></TextBlock.Effect>
+         <TextBlock.RenderTransform><ScaleTransform x:Name="SecondsAccentScale" ScaleX="1" ScaleY="1"/></TextBlock.RenderTransform>
+        </TextBlock>
+       </Grid>
+      </StackPanel>
+     </Grid>
+    </Grid>
+   </Grid>
+  </Border>
+  <Border x:Name="AnimatedBorder" Margin="14" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1.4" CornerRadius="18" Background="Transparent" IsHitTestVisible="False" Opacity="0.22"/>
+ </Grid>
+</Window>

@@ -31,6 +31,7 @@ var tests = new (string, Func<Task>)[]
     ,("Daily 현재 분 저장", () => Sync(DailyCurrentMinute))
     ,("사용자 알람 유형 시간 저장", CustomAlarmSettingsRoundTrip)
     ,("사용자 알람 Picker 바인딩", CustomAlarmPickerBinding)
+    ,("초 시계 강조 구간", () => Sync(SecondsClockEmphasis))
 };
 
 var failed = 0;
@@ -203,10 +204,13 @@ static async Task AlwaysEnabledMigration()
     var path = Path.Combine(Path.GetTempPath(), $"teyemer-enabled-{Guid.NewGuid():N}.json");
     try
     {
-        await File.WriteAllTextAsync(path, """{"RemindersEnabled":false,"ActiveScheduleEnabled":false,"ReminderIntervalMinutes":1}""");
-        var settings = await new JsonSettingsStore(path).LoadAsync();
+        await File.WriteAllTextAsync(path, """{"RemindersEnabled":false,"ShowPopup":false,"ActiveScheduleEnabled":false,"ReminderIntervalMinutes":1}""");
+        var store = new JsonSettingsStore(path);
+        var settings = await store.LoadAsync();
         var engine = new ReminderEngine(settings, At(17, 10));
         A.Eq(ReminderState.ReminderDue, engine.Tick(At(17, 10, 1)).State);
+        await store.SaveAsync(settings);
+        A.False((await File.ReadAllTextAsync(path)).Contains("ShowPopup"));
     }
     finally { DeleteSettingsFiles(path); }
 }
@@ -344,6 +348,16 @@ static Task CustomAlarmPickerBinding()
     thread.Join();
     if (failure is not null) throw failure;
     return Task.CompletedTask;
+}
+
+static void SecondsClockEmphasis()
+{
+    var minute = new DateTime(2026, 8, 20, 17, 10, 0);
+    A.Eq(0d, SecondsClockWindow.CalculateSecondEmphasis(minute.AddSeconds(54)));
+    A.Eq(0d, SecondsClockWindow.CalculateSecondEmphasis(minute.AddSeconds(55)));
+    A.Eq(0.5d, SecondsClockWindow.CalculateSecondEmphasis(minute.AddSeconds(57.5)));
+    A.Eq(1d, SecondsClockWindow.CalculateSecondEmphasis(minute.AddMinutes(1)));
+    A.Eq(0d, SecondsClockWindow.CalculateSecondEmphasis(minute.AddMinutes(1).AddMilliseconds(650)));
 }
 
 static class A

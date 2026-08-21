@@ -63,10 +63,7 @@
         <Grid Style="{StaticResource FormRowStyle}">
          <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
          <TextBlock Text="알림 팝업" Style="{StaticResource FormLabelStyle}"/>
-         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-          <CheckBox Content="표시" Margin="0,8,12,8" IsChecked="{Binding Settings.ShowPopup}"/>
-          <Button Content="미리 보기" Margin="0" MinWidth="92" Command="{Binding PreviewReminderCommand}" ToolTip="오른쪽 아래 알림 팝업을 즉시 표시합니다."/>
-         </StackPanel>
+         <Button Grid.Column="1" Content="미리 보기" Margin="0" MinWidth="92" Height="30" HorizontalAlignment="Left" VerticalAlignment="Center" Command="{Binding PreviewReminderCommand}" ToolTip="오른쪽 아래 알림 팝업을 즉시 표시합니다."/>
         </Grid>
         <Grid Style="{StaticResource FormRowStyle}">
          <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>

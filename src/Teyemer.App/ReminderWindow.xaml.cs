@@ -10,12 +10,12 @@ public partial class ReminderWindow : Window
 {
  private const int GwlExStyle = -20;
  private const int WsExNoActivate = 0x08000000;
- public event EventHandler? StartRequested; public event EventHandler? SnoozeRequested; public event EventHandler? SkipRequested;
+ public event EventHandler? Dismissed;
  private readonly DispatcherTimer _dismissTimer;
  private readonly Storyboard _emphasisStoryboard = new();
  private bool _isDismissing;
- public ReminderWindow(bool isPreview = false, int dismissSeconds = 30) { InitializeComponent(); PreviewLabel.Visibility = isPreview ? Visibility.Visible : Visibility.Collapsed; ConfigureBorderHighlight(); ConfigureEmphasisAnimation(); _dismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(dismissSeconds) }; _dismissTimer.Tick += OnDismiss; Loaded += OnLoaded; Closed += OnClosed; }
- public ReminderWindow(string content, int dismissSeconds) : this(false, dismissSeconds) { ReminderTitle.Text = "알람 시간입니다"; ReminderContent.Text = content; ExerciseActions.Visibility = Visibility.Collapsed; AlarmCloseButton.Visibility = Visibility.Visible; }
+ public ReminderWindow(int dismissSeconds = 30) { InitializeComponent(); ConfigureBorderHighlight(); ConfigureEmphasisAnimation(); _dismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(dismissSeconds) }; _dismissTimer.Tick += OnDismiss; Loaded += OnLoaded; Closed += OnClosed; }
+ public ReminderWindow(string content, int dismissSeconds) : this(dismissSeconds) { ReminderTitle.Text = content; ReminderContent.Visibility = Visibility.Collapsed; }
 
  protected override void OnSourceInitialized(EventArgs e)
  {
@@ -42,12 +42,10 @@ public partial class ReminderWindow : Window
 
   _dismissTimer.Start();
  }
- private void OnDismiss(object? sender, EventArgs e) => BeginDismiss(() => SkipRequested?.Invoke(this, EventArgs.Empty));
+ private void OnDismiss(object? sender, EventArgs e) => Dismiss();
  private void OnClosed(object? sender, EventArgs e) { _dismissTimer.Stop(); _emphasisStoryboard.Remove(this); _dismissTimer.Tick -= OnDismiss; Loaded -= OnLoaded; Closed -= OnClosed; }
- private void Start_Click(object sender, RoutedEventArgs e) => BeginDismiss(() => StartRequested?.Invoke(this, EventArgs.Empty));
- private void Snooze_Click(object sender, RoutedEventArgs e) => BeginDismiss(() => SnoozeRequested?.Invoke(this, EventArgs.Empty));
- private void Skip_Click(object sender, RoutedEventArgs e) => BeginDismiss(() => SkipRequested?.Invoke(this, EventArgs.Empty));
- private void Close_Click(object sender, RoutedEventArgs e) => BeginDismiss(() => SkipRequested?.Invoke(this, EventArgs.Empty));
+ private void Close_Click(object sender, RoutedEventArgs e) => Dismiss();
+ private void Dismiss() => BeginDismiss(() => Dismissed?.Invoke(this, EventArgs.Empty));
  private void BeginDismiss(Action completed)
  {
   if (_isDismissing) return;
